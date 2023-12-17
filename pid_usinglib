@@ -1,0 +1,72 @@
+#include <PID_v1.h>
+
+const int encoderPinA = 2; // Connect encoder pin A to digital pin 2
+const int encoderPinB = 3; // Connect encoder pin B to digital pin 3
+const int motorPin = 10;   // Connect the motor control signal to digital pin 10
+const int directionPin = 7; // Connect the motor direction control signal to digital pin 7
+
+volatile long encoderCount = 0;
+unsigned long prevTime;
+float motorSpeed; // Speed in RPM
+
+const int countsPerRevolution = 6350; // Number of encoder counts per revolution (PPR)
+
+// PID Variables
+double Setpoint = 153.0; // Desired speed in RPM
+double Input, NOutput;
+double Kp = 1.0, Ki = 0.1, Kd = 0.0; // PID constants
+PID myPID(&Input, &NOutput, &Setpoint, Kp, Ki, Kd, DIRECT);
+
+void setup() {
+  pinMode(encoderPinA, INPUT);
+  pinMode(encoderPinB, INPUT);
+  pinMode(motorPin, OUTPUT);
+  pinMode(directionPin, OUTPUT);
+
+  // Set up interrupt on both rising and falling edges of pin A
+  attachInterrupt(digitalPinToInterrupt(encoderPinA), updateEncoder, CHANGE);
+
+  prevTime = millis();
+
+  Serial.begin(9600);
+
+  // Initialize the PID
+  myPID.SetMode(AUTOMATIC);
+  myPID.SetOutputLimits(0, 255); // Adjust this to control motor speed range
+
+  // Set the initial motor direction
+  digitalWrite(directionPin, LOW); // LOW for one direction, HIGH for the other
+}
+
+void loop() {
+  digitalWrite(7,1);
+  analogWrite(10,153)
+  unsigned long currentTime = millis();
+  unsigned long elapsedTime = currentTime - prevTime;
+
+  // Calculate the motor speed in RPM
+  motorSpeed = (encoderCount / countsPerRevolution) / (elapsedTime / 60000.0); // Convert milliseconds to minutes
+  Input = motorSpeed;
+
+  // Compute the PID control signal
+  myPID.Compute();
+
+  // Apply the control signal to the motor (PWM signal)
+  analogWrite(motorPin, abs(NOutput));
+
+  prevTime = currentTime;
+
+  Serial.print("Motor Speed (RPM): ");
+  Serial.println(motorSpeed);
+}
+
+void updateEncoder() {
+  int encoderAState = digitalRead(encoderPinA);
+  int encoderBState = digitalRead(encoderPinB);
+
+  if (encoderAState == encoderBState) {
+    encoderCount--;
+  } else {
+    encoderCount++;
+  }
+}
