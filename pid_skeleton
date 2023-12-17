@@ -1,0 +1,102 @@
+#define ENCA 2 
+#define ENCB 3 
+#define PWM 5
+#define IN1 7
+
+volatile int posi = 0; 
+long prevT = 0;
+float eprev = 0;
+float eintegral = 0;
+int pwm = 150;
+int rps=2;
+int targetspd;
+int ppr=6350;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(ENCA,INPUT);
+  pinMode(ENCB,INPUT);
+  attachInterrupt(digitalPinToInterrupt(ENCA),readEncoder,RISING);
+  pinMode(PWM,OUTPUT);
+  pinMode(IN1,OUTPUT);
+  Serial.println("target pos");
+}
+
+void loop() {
+
+  float targetspd =1.2;
+
+  float kp = 1;
+  float kd = 0.025;
+  float ki = 0.0;
+
+  long currT = micros();
+  float time= currT/1.0e6;
+  float deltaT = (time - prevT);
+  prevT = time ;
+  int pos = 0; 
+  noInterrupts();
+  pos = posi;
+  interrupts();
+  
+  int actualspd = ((float)(pos)/(ppr))/(deltaT);
+  int e = targetspd - actualspd ;
+  float dedt = (e-eprev)/(deltaT);
+  eintegral = eintegral + e*deltaT;
+  float u = kp*e + kd*dedt + ki*eintegral;
+  float pwr = fabs(u);
+  if( pwr > 255 ){
+    pwr = 255;
+  }
+
+  int dir = 1;
+  if(u<0){
+    dir = -1;
+  }
+  setMotor(dir,pwr,PWM,IN1);
+  eprev = e;
+
+  Serial.print(targetspd);
+  Serial.print(" ");
+  Serial.print("time elapsed ");
+  Serial.print(time);
+  Serial.print(" ");
+  Serial.print("prevuous time");
+  Serial.print(prevT);
+  Serial.print("actualrpm");
+  Serial.print(actualspd);
+  Serial.print(" ");
+  Serial.print("deltaT");
+  Serial.print(deltaT);
+  Serial.print(pos);
+  Serial.print("` ");
+
+ 
+  Serial.println();
+}
+
+void setMotor(int dir, int pwmVal, int pwm, int in1){
+  analogWrite(pwm,pwmVal);
+  if(dir == 1){
+    digitalWrite(in1,HIGH);
+
+  }
+  else if(dir == -1){
+    digitalWrite(in1,LOW);
+
+  }
+  else{
+    digitalWrite(in1,LOW);
+
+  }  
+}
+
+void readEncoder(){
+  int b = digitalRead(ENCB);
+  if(b > 0){
+    posi++;
+  }
+  else{
+    posi--;
+  }
+}
