@@ -1,0 +1,238 @@
+#include <Encoder.h>
+#include <PID_v1.h>
+
+// Define the pins for the encoders (A and B channels)
+const int encoderPin1A = 2;
+const int encoderPin1B = 3;
+const int encoderPin2A = 4;
+const int encoderPin2B = 5;
+const int encoderPin3A = 6;
+const int encoderPin3B = 7;
+const int encoderPin4A = 8;
+const int encoderPin4B = 9;
+
+// Create Encoder objects for each motor
+Encoder encoder1(encoderPin1A, encoderPin1B);
+Encoder encoder2(encoderPin2A, encoderPin2B);
+Encoder encoder3(encoderPin3A, encoderPin3B);
+Encoder encoder4(encoderPin4A, encoderPin4B);
+
+// Motor control pins for the four motors
+const int motor1_direction_pin = 10;
+const int motor1_speed_pin = 11;
+const int motor2_direction_pin = 12;
+const int motor2_speed_pin = 13;
+const int motor3_direction_pin = A0;
+const int motor3_speed_pin = A1;
+const int motor4_direction_pin = A2;
+const int motor4_speed_pin = A3;
+
+// Define the PID variables for each motor
+double Setpoint1 = 1000.0; // Desired RPM for motor 1
+double Setpoint2 = 1000.0; // Desired RPM for motor 2
+double Setpoint3 = 1000.0; // Desired RPM for motor 3
+double Setpoint4 = 1000.0; // Desired RPM for motor 4
+double Input1, Input2, Input3, Input4;
+double Output1, Output2, Output3, Output4;
+double Kp = 2.0; // Proportional constant (adjust as needed)
+double Ki = 5.0; // Integral constant (adjust as needed)
+double Kd = 1.0; // Derivative constant (adjust as needed)
+
+PID myPID1(&Input1, &Output1, &Setpoint1, Kp, Ki, Kd, DIRECT);
+PID myPID2(&Input2, &Output2, &Setpoint2, Kp, Ki, Kd, DIRECT);
+PID myPID3(&Input3, &Output3, &Setpoint3, Kp, Ki, Kd, DIRECT);
+PID myPID4(&Input4, &Output4, &Setpoint4, Kp, Ki, Kd, DIRECT);
+
+void setup() {
+  // Initialize the serial communication
+  Serial.begin(9600);
+
+  // Set up motor control pins
+  pinMode(motor1_direction_pin, OUTPUT);
+  pinMode(motor1_speed_pin, OUTPUT);
+  pinMode(motor2_direction_pin, OUTPUT);
+  pinMode(motor2_speed_pin, OUTPUT);
+  pinMode(motor3_direction_pin, OUTPUT);
+  pinMode(motor3_speed_pin, OUTPUT);
+  pinMode(motor4_direction_pin, OUTPUT);
+  pinMode(motor4_speed_pin, OUTPUT);
+
+  // Set PID tuning parameters for each motor
+  myPID1.SetMode(AUTOMATIC);
+  myPID1.SetSampleTime(1000); // 1-second sample time
+  myPID1.SetOutputLimits(-255, 255); // Adjust this to match your motor driver
+
+  myPID2.SetMode(AUTOMATIC);
+  myPID2.SetSampleTime(1000);
+  myPID2.SetOutputLimits(-255, 255);
+
+  myPID3.SetMode(AUTOMATIC);
+  myPID3.SetSampleTime(1000);
+  myPID3.SetOutputLimits(-255, 255);
+
+  myPID4.SetMode(AUTOMATIC);
+  myPID4.SetSampleTime(1000);
+  myPID4.SetOutputLimits(-255, 255);
+
+  // Initialize the encoders and motor control variables
+  encoder1.write(0);
+  encoder2.write(0);
+  encoder3.write(0);
+  encoder4.write(0);
+  Input1 = 0;
+  Input2 = 0;
+  Input3 = 0;
+  Input4 = 0;
+  Output1 = 0;
+  Output2 = 0;
+  Output3 = 0;
+  Output4 = 0;
+  analogWrite(motor1_speed_pin, 0);
+  analogWrite(motor2_speed_pin, 0);
+  analogWrite(motor3_speed_pin, 0);
+  analogWrite(motor4_speed_pin, 0);
+}
+
+void loop() {
+  char command = Serial.read();  // Read serial input
+
+  switch (command) {
+    case 'w':  // Motor 1: Forward, Motor 2: Forward, Motor 3: Forward, Motor 4: Forward
+      digitalWrite(motor1_direction_pin, HIGH);
+      analogWrite(motor1_speed_pin, 153);  // Full speed (0-153)
+      digitalWrite(motor2_direction_pin, HIGH);
+      analogWrite(motor2_speed_pin, 153);
+      digitalWrite(motor3_direction_pin, HIGH);
+      analogWrite(motor3_speed_pin, 153);
+      digitalWrite(motor4_direction_pin, HIGH);
+      analogWrite(motor4_speed_pin, 153);
+      break;
+      
+    case 's':  // Motor 1: Backward, Motor 2: Backward, Motor 3: Backward, Motor 4: Backward
+      digitalWrite(motor1_direction_pin, LOW);
+      analogWrite(motor1_speed_pin, 153);
+      digitalWrite(motor2_direction_pin, LOW);
+      analogWrite(motor2_speed_pin, 153);
+      digitalWrite(motor3_direction_pin, LOW);
+      analogWrite(motor3_speed_pin, 153);
+      digitalWrite(motor4_direction_pin, LOW);
+      analogWrite(motor4_speed_pin, 153);
+      break;
+      
+    case 'a':  // Motor 1: Left, Motor 2: Left, Motor 3: Left, Motor 4: Left
+      digitalWrite(motor1_direction_pin, HIGH);
+      analogWrite(motor1_speed_pin, 153);  // Full speed (0-153)
+      digitalWrite(motor2_direction_pin, HIGH);
+      analogWrite(motor2_speed_pin, 153);
+      digitalWrite(motor3_direction_pin, LOW);
+      analogWrite(motor3_speed_pin, 153);
+      digitalWrite(motor4_direction_pin, LOW);
+      analogWrite(motor4_speed_pin, 153);
+      break;
+      
+    case 'd':  // Motor 1: Right, Motor 2: Right, Motor 3: Right, Motor 4: Right
+      digitalWrite(motor1_direction_pin, LOW);
+      analogWrite(motor1_speed_pin, 153);
+      digitalWrite(motor2_direction_pin, LOW);
+      analogWrite(motor2_speed_pin, 153);
+      digitalWrite(motor3_direction_pin, HIGH);
+      analogWrite(motor3_speed_pin, 153);
+      digitalWrite(motor4_direction_pin, HIGH);
+      analogWrite(motor4_speed_pin, 153);
+      break;
+      
+    case ' ':  // Stop all motors
+      digitalWrite(motor1_direction_pin, LOW);
+      analogWrite(motor1_speed_pin, 0);
+      digitalWrite(motor2_direction_pin, LOW);
+      analogWrite(motor2_speed_pin, 0);
+      digitalWrite(motor3_direction_pin, LOW);
+      analogWrite(motor3_speed_pin, 0);
+      digitalWrite(motor4_direction_pin, LOW);
+      analogWrite(motor4_speed_pin, 0);
+      break;
+      
+    case 'q':  // Motor 1: Partial Right, Motor 2: Partial Right, Motor 3: Partial Right, Motor 4: Partial Right
+      digitalWrite(motor1_direction_pin, HIGH);
+      analogWrite(motor1_speed_pin, 153);  // Half speed (0-153)
+      digitalWrite(motor2_direction_pin, HIGH);
+      analogWrite(motor2_speed_pin, 153);
+      digitalWrite(motor3_direction_pin, HIGH);
+      analogWrite(motor3_speed_pin, 100);
+      digitalWrite(motor4_direction_pin, HIGH);
+      analogWrite(motor4_speed_pin, 100);
+      break;
+      
+    case 'e':  // Motor 1: Partial Left, Motor 2: Partial Left, Motor 3: Partial Left, Motor 4: Partial Left
+      digitalWrite(motor1_direction_pin, HIGH);
+      analogWrite(motor1_speed_pin, 100);
+      digitalWrite(motor2_direction_pin, HIGH);
+      analogWrite(motor2_speed_pin, 100);
+      digitalWrite(motor3_direction_pin, HIGH);
+      analogWrite(motor3_speed_pin, 153);
+      digitalWrite(motor4_direction_pin, HIGH);
+      analogWrite(motor4_speed_pin, 153);
+      break;
+      
+    default:
+      break;
+  }
+
+  // Read the encoder positions and calculate RPM for each motor
+  long newPosition1 = encoder1.read();
+  Input1 = (newPosition1 / 6350.0) / 1.0; // Calculate RPM with 6350 pulses per revolution
+
+  long newPosition2 = encoder2.read();
+  Input2 = (newPosition2 / 6350.0) / 1.0;
+
+  long newPosition3 = encoder3.read();
+  Input3 = (newPosition3 / 6350.0) / 1.0;
+
+  long newPosition4 = encoder4.read();
+  Input4 = (newPosition4 / 6350.0) / 1.0;
+
+  // Compute the PID outputs for each motor to control motor speed
+  myPID1.Compute();
+  myPID2.Compute();
+  myPID3.Compute();
+  myPID4.Compute();
+
+  // Update motor speeds
+  int motorSpeed1 = abs(Output1);
+  int motorSpeed2 = abs(Output2);
+  int motorSpeed3 = abs(Output3);
+  int motorSpeed4 = abs(Output4);
+
+  digitalWrite(motor1_direction_pin, Output1 >= 0 ? HIGH : LOW);
+  analogWrite(motor1_speed_pin, motorSpeed1);
+
+  digitalWrite(motor2_direction_pin, Output2 >= 0 ? HIGH : LOW);
+  analogWrite(motor2_speed_pin, motorSpeed2);
+
+  digitalWrite(motor3_direction_pin, Output3 >= 0 ? HIGH : LOW);
+  analogWrite(motor3_speed_pin, motorSpeed3);
+
+  digitalWrite(motor4_direction_pin, Output4 >= 0 ? HIGH : LOW);
+  analogWrite(motor4_speed_pin, motorSpeed4);
+
+  // Print the RPM and PID outputs for each motor to the serial monitor
+  Serial.print("Motor 1 RPM: ");
+  Serial.print(Input1 * 60); // Convert RPM to RPM (or adjust Setpoint units)
+  Serial.print("  Output: ");
+  Serial.print(Output1);
+  Serial.print("  Motor 2 RPM: ");
+  Serial.print(Input2 * 60);
+  Serial.print("  Output: ");
+  Serial.print(Output2);
+  Serial.print("  Motor 3 RPM: ");
+  Serial.print(Input3 * 60);
+  Serial.print("  Output: ");
+  Serial.print(Output3);
+  Serial.print("  Motor 4 RPM: ");
+  Serial.print(Input4 * 60);
+  Serial.print("  Output: ");
+  Serial.println(Output4);
+
+  // Add a delay to allow time for PID calculations and motor speed adjustments
+  delay(1000);
+}
