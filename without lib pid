@@ -1,6 +1,6 @@
 const int motorPin1 = 5; // PWM signal to this pin results in CW rotation
 const int motorPin2 = 6; // PWM signal to this pin results in CCW rotation
-const int driverICEnablePin = 9; // L293D enable pin
+const int driverICEnablePin = 9; // pwm enable pin
 
 // encoder pins
 const int encoderChA = 2; // encoder channel A
@@ -8,12 +8,12 @@ const int encoderChB = 3; // encoder channel B
 
 // variables
 int motorPWM = 60; // initial value of PWM
-int motorSetSpeed = 30; // desired motor speed in RPM
+int motorSetSpeed = 160; // desired motor speed in RPM
 
 // encoder related variables
 int encoder_pos = 0; // encoder counts
 float gearRatio = 180.0;  // gear ratio of 1:180
-float encoderPPR = 12.0; // encoder pulses per rotation. 12 pulses per channel
+float encoderPPR = 6350.0; // encoder pulses per rotation. 12 pulses per channel
 float countSpeed; // rate of count change
 float inputSpeedRPS;
 float outputSpeedRPS;
