@@ -1,0 +1,131 @@
+const int motorPin1 = 5; // PWM signal to this pin results in CW rotation
+const int motorPin2 = 6; // PWM signal to this pin results in CCW rotation
+const int driverICEnablePin = 9; // L293D enable pin
+
+// encoder pins
+const int encoderChA = 2; // encoder channel A
+const int encoderChB = 3; // encoder channel B
+
+// variables
+int motorPWM = 60; // initial value of PWM
+int motorSetSpeed = 30; // desired motor speed in RPM
+
+// encoder related variables
+int encoder_pos = 0; // encoder counts
+float gearRatio = 180.0;  // gear ratio of 1:180
+float encoderPPR = 12.0; // encoder pulses per rotation. 12 pulses per channel
+float countSpeed; // rate of count change
+float inputSpeedRPS;
+float outputSpeedRPS;
+float inputSpeedRPM;
+int outputSpeedRPM;   // actual motor speed in RPM
+
+// timer variables
+unsigned long timeStamp = 0;
+unsigned long timeElapsed = 0;
+int sampleRate = 200; // Speed measurement and PID computation rate in ms
+
+// PID related variables
+double error = 0; // set speed - actual speed
+double error_I = 0; // integral error
+double error_D = 0;  // derivative error
+double past_error = 0; // used to calculate derivative error
+const float Kp = 2.0;  // proportional gain, default 2.0
+const float Ki = 5.0;  // integral gain, default 5.0
+const float Kd = 2.0;  // derivative gain, default 2.0
+
+// Set up
+void setup() {
+  // input pins
+  pinMode(encoderChA, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(encoderChA), encoder, RISING);
+  pinMode(encoderChB, INPUT_PULLUP);
+
+  // output pins
+  pinMode(motorPin1, OUTPUT);
+  pinMode(motorPin2, OUTPUT);
+  pinMode(driverICEnablePin, OUTPUT);
+
+  digitalWrite(driverICEnablePin, HIGH); // enable L293D
+  Serial.begin(9600);
+
+  // Set a fixed motor speed for constant operation
+  motorSetSpeed = 30; // Set your desired constant speed here
+}
+
+// Main Loop
+void loop() {
+  timeElapsed = millis() - timeStamp; // time since last speed measurement and PID calculation
+  if (timeElapsed >= sampleRate) {
+    getSpeed(); // calculated motor actual speed in RPM
+    computerPID(); // compute PID output based on error
+    timeStamp = millis(); // resets time stamp for the next round of calculation
+  }
+
+  MotorCCW(0, motorPWM); // signals motor to rotate in CCW
+
+  // serial prints
+  Serial.print(" SetRPM : ");
+  Serial.print(motorSetSpeed);
+
+  Serial.print(" ActualRPM " );
+  Serial.print(outputSpeedRPM);
+
+  Serial.print(" Error : ");
+  Serial.print(error);
+
+  Serial.print(" PID output PWM: ");
+  Serial.println(motorPWM);
+  delay(20);
+}// End of void loop
+
+void encoder()
+{   
+   if (digitalRead(encoderChB) == HIGH)
+   {
+    encoder_pos++;
+   }
+  else
+  {
+    encoder_pos--;
+  }  
+}
+
+void getSpeed()
+{  
+   countSpeed = 1000.0 * (float)encoder_pos / (timeElapsed); // multiply by 1000 so that it's in pulses per second
+   encoder_pos = 0; // reset encoder counter once the current speed is calculated 
+   inputSpeedRPS = countSpeed / encoderPPR; //(pulses/sec) / (pulses/rotation) = rev/sec
+   outputSpeedRPS = inputSpeedRPS / gearRatio; // divide by gear ratio
+   inputSpeedRPM = inputSpeedRPS * 60.0; // RPS to RPM
+   outputSpeedRPM = inputSpeedRPM / gearRatio; // divide by gear ratio  
+}
+
+void computerPID()
+{
+    error = motorSetSpeed - outputSpeedRPM; // error
+    error_I = error_I + error; // integral error
+    error_D = past_error - error; // derivative error
+    past_error = error;
+    
+    if (error_I > 200) { // limit overflow of integral error 
+      error_I = 0;
+    }
+    motorPWM = Kp * error + Ki * error_I + Kd * error_D; // P + I + D
+    
+    if (motorPWM >= 255) // limit max
+    {
+      motorPWM = 255;
+    }
+    
+    else if (motorPWM <= 0) //limit min
+    {
+      motorPWM = 0;
+    }  
+}
+
+void MotorCCW(int dir, int pwm)
+{
+  digitalWrite(motorPin1, dir);
+  analogWrite(motorPin2, pwm);
+}
